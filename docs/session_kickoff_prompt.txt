@@ -1,0 +1,168 @@
+================================================================================
+SESSION KICKOFF PROMPT — n-cmapss-ds02-fusion
+Paste this as your first message to Claude Code in a new session.
+Last updated: 2026-11-05 (after Phase 1 data ingestion + documentation pass)
+================================================================================
+
+This is the n-cmapss-ds02-fusion project. We are resuming work, not starting fresh.
+
+BEFORE DOING ANYTHING ELSE, read these files in order and confirm your understanding:
+
+1. CLAUDE.md
+   Session context, current state, hard constraints, locked decisions.
+
+2. skills/replication_discipline/SKILL.md
+   The full 15 rules of engagement. This governs how you respond in EVERY turn,
+   including the required response workflow and the replication-specific discipline.
+
+3. PROGRESS.md
+   Session history. Read the MOST RECENT entry (Session 3) carefully — it records
+   where we stopped and what the next actions are.
+
+4. PROJECT_PLAN.md
+   Sections 0, 1, 2, 4 (metadata, locked decisions, architecture, Phase 1), plus
+   section 18 (the two-repo split and the agent/MCP architecture).
+
+5. REPLICATION_NOTES.md
+   The deviation ledger. Five deviations are recorded. Respect them. Do not add
+   new deviations silently — every departure from the target paper needs an entry.
+
+6. docs/x_s_split_rationale.md
+   Why x_s = 16, x_v = 11, theta = 3. Short, and it settles a question that would
+   otherwise come up again.
+
+DO NOT SKIM. These files encode months of decisions. Without full context you will
+violate rules the project depends on.
+
+--------------------------------------------------------------------------------
+WHERE WE ARE
+--------------------------------------------------------------------------------
+
+Phase 0: complete. Both papers read, decisions locked.
+Phase 1: data ingestion COMPLETE AND VERIFIED. EDA not started.
+
+What exists and works:
+  - src/data_loader.py          loads DS02, decimates 1 Hz -> 0.1 Hz, writes Parquet
+  - tests/test_data_loader.py   38 tests, all passing, asserting target paper Table 1
+  - data/processed/*.parquet    526,558 dev rows and 125,479 test rows
+
+The acceptance gate is met: all 9 units reproduce the paper's Table 1 with t_s and
+t_EOL exact and m_i within +/-440.
+
+The three findings that matter most (full detail in REPLICATION_NOTES.md):
+  - The released DS02 is 1 Hz; the paper used 0.1 Hz. We decimate every 10th sample
+    within each (unit, cycle) group, offset 0. Deviation 4.
+  - The paper used an OLDER DS02 release than the one we have. Same simulation
+    (cycle counts and transition cycles match exactly), finer sampling in ours.
+    Deviation 5, status open and not closable.
+  - x_s = 16 (T40 and P30 promoted), x_v = 11 (phi dropped), theta = 3. Deviation 2.
+
+--------------------------------------------------------------------------------
+NEXT ACTIONS, IN ORDER
+--------------------------------------------------------------------------------
+
+1. Partition data/processed/ Parquet by unit -> data/processed/ds02/unit=N/part.parquet
+   Decision D13. Do this BEFORE anything depends on the current layout — the agent
+   layer's get_unit_data() tool is the main consumer and retrofitting is invasive.
+   Tests should pass unchanged afterwards.
+
+2. notebooks/01_data_eda.ipynb — the full EDA. Reproduce dataset paper Table 1,
+   Figure 3 (flight envelope KDEs) and Figure 6 (degradation traces). Any mismatch
+   is a blocker. The NASA example notebook has working plot functions worth adapting
+   with attribution to Manuel Arias.
+
+3. notebooks/02_data_prep_experiments.ipynb — experiments only.
+
+4. src/utils.py — device-agnostic helpers (get_device etc.), per docs/colab_guide.md.
+
+That closes Phase 1. Then Phase 2 (surrogate D).
+
+Housekeeping still outstanding:
+  - pip install duckdb  (needed from Phase 5)
+  - git init + first commit + push, if not already done
+
+--------------------------------------------------------------------------------
+HARD CONSTRAINTS (from CLAUDE.md — do not violate)
+--------------------------------------------------------------------------------
+
+- Python 3.12, PyTorch 2.x, snake_case. Sensor names keep the paper's own symbols
+  verbatim (T24, Ps30, alt); snake_case applies to everything else.
+- v1 = REPLICATION ONLY. No new methods, no architectures the paper did not use.
+- No thermodynamic solver. We build a DNN surrogate D, not a cycle solver.
+- No LEAP-1A code reuse. That project stays separate.
+- No PostgreSQL. DuckDB only.
+- Parquet for all intermediate storage.
+- Every deviation from the paper goes into REPLICATION_NOTES.md with a fidelity
+  impact assessment. Adding deviating code without a ledger entry is a rule violation.
+- No MLOps, agent, MCP or GenAI work in THIS repo. All of that belongs to the second
+  repository, turbofan-ehm-platform, which starts after Phase 3. See PROJECT_PLAN
+  section 18. If you catch me starting it here, stop me.
+- Code must run on CPU, local GPU, or Colab without edits.
+
+--------------------------------------------------------------------------------
+HOW I WANT YOU TO WORK
+--------------------------------------------------------------------------------
+
+Follow the response workflow in skills/replication_discipline/SKILL.md every turn:
+restate -> list missing info -> ask if needed -> explain reasoning -> answer ->
+list assumptions -> state confidence (High/Medium/Low, with why).
+
+In particular:
+- Never assume. Ask before inventing missing information.
+- Never fabricate APIs, file names, citations, URLs, or numbers from the paper.
+  Say "I don't know" or go verify.
+- Cite the paper by section, table or page when making claims about it. I want to
+  be able to check you against the source.
+- When we build models, tell me WHERE IN THE PAPER it is specified, so I understand
+  what is happening as we go.
+- Challenge me when I am wrong. Point out logical errors and unsafe assumptions
+  rather than agreeing.
+- Do not over-engineer. Simplest thing that meets the requirement.
+- Ask before deciding architecture, libraries, hyperparameters, or naming.
+- You may search the internet to verify facts. Give me the links and your confidence
+  in each source, and we will decide together whether it is reliable. Never assume
+  and never hallucinate.
+
+Do NOT start writing code until you have read the files, proposed a sequence, and
+I have confirmed it.
+
+--------------------------------------------------------------------------------
+ENVIRONMENT
+--------------------------------------------------------------------------------
+
+Verified on Windows 2026-11-05; re-verify after the Linux migration.
+
+  conda env    gnn_surrogate
+  python       3.12.11
+  torch        2.8.0 (CUDA build; on Linux install the build matching your driver)
+  numpy 2.5.1   pandas 2.3.3   h5py 3.16.0   pyarrow 23.0.1   pytest 9.0.3
+  matplotlib 3.10.8   seaborn 0.13.2   plotly 6.7.0   jupyterlab 4.3.5
+  duckdb       NOT INSTALLED — needed from Phase 5
+  GPU          NVIDIA RTX 2060, 6 GB
+
+DATA: v1 needs exactly one file, N-CMAPSS_DS02-006.h5 (2.28 GB). It is gitignored.
+src/data_loader.py reads the N_CMAPSS_DATA environment variable first and falls back
+to <repo>/data, so point it anywhere:
+
+    export N_CMAPSS_DATA=/path/to/directory/holding/the/h5
+
+Then regenerate and verify:
+
+    python src/data_loader.py
+    python -m pytest tests/test_data_loader.py -q      # expect 38 passed
+
+The papers in docs/ are gitignored — re-download from the DOIs in REFERENCES.md.
+
+--------------------------------------------------------------------------------
+FIRST RESPONSE I WANT FROM YOU
+--------------------------------------------------------------------------------
+
+1. Confirm you have read all six files and state what phase we are in.
+2. Confirm the environment works (torch imports, CUDA status, 38 tests pass).
+3. List anything missing or that you need from me.
+4. Propose the sequence for this session, with reasoning.
+5. List your assumptions explicitly.
+6. State your confidence (High/Medium/Low) and why.
+
+Then wait for my confirmation before writing any code.
+================================================================================

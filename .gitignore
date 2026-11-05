@@ -1,0 +1,79 @@
+# Data (large HDF5 files, do not commit)
+data/DS02/
+data/*.zip
+data/*.h5
+data/*.hdf5
+
+# Derived data. Regenerate with: python src/data_loader.py
+# ds02_dev.parquet is 125 MB, over GitHub's 100 MB per-file limit.
+# For Repo 2 to consume these, publish them as a GitHub Release asset or on
+# Hugging Face Hub — not through git.
+data/processed/
+*.parquet
+
+# Third-party papers and notebooks (not ours to redistribute).
+# Sources for all of these are listed in REFERENCES.md.
+docs/*.pdf
+data/*.pdf
+data/*.ipynb
+
+# Results and checkpoints
+results/checkpoints/
+results/logs/
+results/theta_trajectories/
+results/figures/*.png
+results/figures/*.pdf
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# PyTorch
+*.pt
+*.pth
+
+# Conda
+.conda/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
